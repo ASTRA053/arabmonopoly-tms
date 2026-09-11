@@ -1,0 +1,12 @@
+.env.local
+.env
+.neon
+**/.env
+**/.env.*
+**/node_modules/
+**/dist/
+**/release/
+*.tgz
+*.log
+backend/.env
+backend/.env.neon

@@ -1,0 +1,31 @@
+{
+  "name": "arabmonopoly-logistics-desktop",
+  "version": "1.0.0",
+  "description": "Arabmonopoly Logistics desktop admin",
+  "main": "main.cjs",
+  "author": "Arabmonopoly Logistics",
+  "private": true,
+  "scripts": {
+    "start": "electron .",
+    "dist": "node copy-dist.cjs && electron-builder --win nsis --x64"
+  },
+  "devDependencies": {
+    "electron": "^41.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.arabmonopoly.logistics.desktop",
+    "productName": "Arabmonopoly Logistics",
+    "files": [
+      "main.cjs",
+      "web-admin-dist/**/*"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": ""
+    }
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "expo": {
+    "name": "Arabmonopoly",
+    "slug": "arabmonopoly",
+    "version": "1.0.0",
+    "android": {
+      "package": "com.arabmonopoly.logistics",
+      "versionCode": 2,
+      "usesCleartextTraffic": true
+    },
+    "web": {
+      "output": "single"
+    },
+    "plugins": [
+      "expo-splash-screen",
+      "expo-status-bar",
+      "expo-font"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "e92ef49b-7b91-49cd-b75b-d966c713076d"
+      }
+    }
+  }
+}

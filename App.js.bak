@@ -1,0 +1,49 @@
+import React, { useState } from 'react';
+import { NavigationContainer } from '@react-navigation/native';
+import { createStackNavigator } from '@react-navigation/stack';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import LoginScreen from './src/screens/LoginScreen';
+import TripsScreen from './src/screens/TripsScreen';
+import TripDetailScreen from './src/screens/TripDetailScreen';
+import EarningsScreen from './src/screens/EarningsScreen';
+
+const Stack = createStackNavigator();
+
+export default function App() {
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
+
+  return (
+    <SafeAreaProvider>
+      <NavigationContainer>
+        <Stack.Navigator>
+          {!token ? (
+            <Stack.Screen name="Login">
+              {props => (
+                <LoginScreen
+                  {...props}
+                  onLogin={(t, u) => {
+                    setToken(t);
+                    setUser(u);
+                  }}
+                />
+              )}
+            </Stack.Screen>
+          ) : (
+            <>
+              <Stack.Screen name="Trips">
+                {props => <TripsScreen {...props} token={token} user={user} />}
+              </Stack.Screen>
+              <Stack.Screen name="TripDetail">
+                {props => <TripDetailScreen {...props} token={token} />}
+              </Stack.Screen>
+              <Stack.Screen name="Earnings">
+                {props => <EarningsScreen {...props} token={token} user={user} />}
+              </Stack.Screen>
+            </>
+          )}
+        </Stack.Navigator>
+      </NavigationContainer>
+    </SafeAreaProvider>
+  );
+}
