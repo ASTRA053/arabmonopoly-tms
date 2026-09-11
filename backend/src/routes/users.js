@@ -2,6 +2,7 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import { pool } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { recordAudit } from '../audit.js';
 
 const router = Router();
 router.use(requireAuth, requireRole('admin'));
@@ -24,6 +25,7 @@ router.post('/', async (req, res) => {
        RETURNING id, name, email, role, driver_id, created_at`,
       [name, email.toLowerCase(), hash, role, driver_id || null]
     );
+    await recordAudit({ actorUserId: req.user.id, action: 'user_created', entityType: 'user', entityId: rows[0].id, metadata: { role: rows[0].role } });
     res.status(201).json(rows[0]);
   } catch (error) {
     if (error.code === '23505') return res.status(409).json({ error: 'Email already exists' });

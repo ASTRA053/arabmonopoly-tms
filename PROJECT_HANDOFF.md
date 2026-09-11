@@ -64,13 +64,24 @@ API route groups:
 - `/api/payments` driver settlements
 - `/api/expenses` operational expenses
 - `/api/dashboard/summary` live KPI and reporting summary
+- `/api/locations` vehicle GPS location ingestion and latest locations
+- `/api/audit` admin/dispatcher audit log access
 
 Important driver endpoints:
 
 - `GET /api/trips/mine`: returns trips assigned to the authenticated driver
 - `PATCH /api/trips/:id/delivery-proof`: accepts a delivery photo and marks the driver's trip delivered
 
-Delivery proof is stored in the `delivery_proofs` table. The photo is currently stored as a data URL in PostgreSQL. For production scale, move photo blobs to object storage and store only the URL in PostgreSQL.
+Delivery proof metadata is stored in the `delivery_proofs` table. Photos are uploaded to configured S3-compatible object storage and only their public URL is stored in PostgreSQL.
+
+Render object-storage variables:
+
+- `OBJECT_STORAGE_ENDPOINT`
+- `OBJECT_STORAGE_REGION`
+- `OBJECT_STORAGE_BUCKET`
+- `OBJECT_STORAGE_ACCESS_KEY`
+- `OBJECT_STORAGE_SECRET_KEY`
+- `OBJECT_STORAGE_PUBLIC_URL`
 
 ## Database
 
@@ -412,7 +423,7 @@ npm run lint
 
 - The free Render service may sleep when idle.
 - The free Neon database has plan limits.
-- Delivery photos are stored directly as data URLs in PostgreSQL; object storage should be used later for scale.
+- Delivery photo uploads require S3-compatible object-storage variables on Render.
 - GPS/live map tracking is not implemented.
 - Full production role permissions should be expanded beyond the current admin/driver route guards.
 - The admin UI has broad CRUD coverage, but some edit/delete flows still need deeper lifecycle handling.
@@ -427,7 +438,7 @@ npm run lint
 4. Install the latest public-API APK.
 5. Test driver login, assigned trip display, delivery photo upload, and laptop totals.
 6. Deploy the web admin to Netlify or Cloudflare Pages using `VITE_API_URL`.
-7. Move delivery photo storage to object storage.
-8. Add GPS/location tracking and audit logs.
-9. Add database migrations instead of ad hoc startup changes.
-10. Enable GitHub Dependabot and review the reported dependency vulnerabilities.
+7. Choose an S3-compatible provider and configure the six object-storage variables on Render.
+8. Add mobile background location capture using `/api/locations`.
+9. Review audit logs through `/api/audit`.
+10. Run and review Dependabot pull requests.

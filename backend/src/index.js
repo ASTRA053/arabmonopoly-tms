@@ -14,6 +14,9 @@ import expensesRoutes from './routes/expenses.js';
 import dashboardRoutes from './routes/dashboard.js';
 import usersRoutes from './routes/users.js';
 import { pool } from './db.js';
+import { runMigrations } from './migrate.js';
+import locationsRoutes from './routes/locations.js';
+import auditRoutes from './routes/audit.js';
 
 const app = express();
 app.use(cors());
@@ -30,19 +33,12 @@ app.use('/api/payments', paymentsRoutes);
 app.use('/api/expenses', expensesRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/users', usersRoutes);
+app.use('/api/locations', locationsRoutes);
+app.use('/api/audit', auditRoutes);
 
 const PORT = process.env.PORT || 4000;
 async function start() {
-  await pool.query(`
-    CREATE TABLE IF NOT EXISTS delivery_proofs (
-      id SERIAL PRIMARY KEY,
-      trip_id INT NOT NULL,
-      driver_id INT NOT NULL,
-      photo TEXT NOT NULL,
-      notes TEXT,
-      created_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
+  await runMigrations();
   app.listen(PORT, () => console.log(`TMS API running on port ${PORT}`));
 }
 
