@@ -23,7 +23,7 @@ const navItems = [
   ['Drivers', '♙'], ['Users', '♚'], ['Loads', '▤'], ['Customers', '◎'], ['Fuel', '◉'], ['Payments', '◇'], ['Expenses', '✦'], ['Reports', '▥'], ['Settings', '⚙'],
 ]
 
-const API = import.meta.env.VITE_API_URL || (window.location.protocol === 'file:' ? 'http://localhost:4000/api' : `${window.location.protocol}//${window.location.hostname}:4000/api`)
+const API = import.meta.env.VITE_API_URL || (window.location.protocol === 'file:' ? 'https://arabmonopoly-api.onrender.com/api' : `${window.location.protocol}//${window.location.hostname}:4000/api`)
 const moduleConfig = {
   Trips: { endpoint: 'trips', title: 'Trip control', subtitle: 'Create and monitor every movement across your network.', columns: [['id', 'Trip'], ['driver_name', 'Driver'], ['plate', 'Vehicle'], ['status', 'Status'], ['planned_start', 'Planned start']], fields: [['load_id', 'Load ID'], ['vehicle_id', 'Vehicle ID'], ['driver_id', 'Driver ID'], ['planned_start', 'Planned start'], ['planned_end', 'Planned end'], ['rate_per_trip', 'Trip rate']] },
   Fleet: { endpoint: 'vehicles', title: 'Fleet control', subtitle: 'Keep every vehicle, document and availability state in one place.', columns: [['id', 'ID'], ['plate', 'Plate'], ['model', 'Model'], ['capacity', 'Capacity'], ['status', 'Status']], fields: [['plate', 'Plate'], ['model', 'Model'], ['capacity', 'Capacity'], ['year', 'Year'], ['gps_device_id', 'GPS device ID'], ['status', 'Status']] },
