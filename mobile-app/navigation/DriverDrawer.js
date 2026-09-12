@@ -6,6 +6,7 @@ import { View, StyleSheet, Alert, Platform } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 
 import DriverDashboardScreen from '../screens/driver/DriverDashboardScreen';
+import DriverFuelScreen from '../screens/driver/DriverFuelScreen';
 import DriverTripsScreen from '../screens/driver/DriverTripsScreen';
 
 const Drawer = createDrawerNavigator();
@@ -43,6 +44,7 @@ export default function DriverDrawer() {
     <Drawer.Navigator drawerContent={(props) => <CustomDrawerContent {...props} />}>
       <Drawer.Screen name="My dashboard" component={DriverDashboardScreen} />
       <Drawer.Screen name="My trips" component={DriverTripsScreen} />
+      <Drawer.Screen name="Add fuel" component={DriverFuelScreen} />
     </Drawer.Navigator>
   );
 }

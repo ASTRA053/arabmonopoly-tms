@@ -5,7 +5,7 @@
     "version": "1.0.0",
     "android": {
       "package": "com.arabmonopoly.logistics",
-      "versionCode": 3,
+      "versionCode": 4,
       "usesCleartextTraffic": true,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
