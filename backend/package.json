@@ -17,6 +17,9 @@
     "jsonwebtoken": "^9.0.2",
     "pg": "^8.22.0"
   },
+    "overrides": {
+      "qs": "^6.16.0"
+    },
   "devDependencies": {
     "@types/bcrypt": "^6.0.0",
     "ts-node": "^10.9.2",
