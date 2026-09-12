@@ -1,6 +1,6 @@
 {
   "name": "arabmonopoly-logistics-desktop",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Arabmonopoly Logistics desktop admin",
   "main": "main.cjs",
   "author": "Arabmonopoly Logistics",
