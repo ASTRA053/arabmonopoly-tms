@@ -6,7 +6,11 @@
     "android": {
       "package": "com.arabmonopoly.logistics",
       "versionCode": 2,
-      "usesCleartextTraffic": true
+      "usesCleartextTraffic": true,
+      "permissions": [
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_FINE_LOCATION"
+      ]
     },
     "web": {
       "output": "single"

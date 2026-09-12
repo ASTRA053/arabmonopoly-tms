@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useAuth } from '../../context/AuthContext';
-import { fetchMyTrips, submitDeliveryProof } from './DriverData';
+import { fetchMyTrips, submitCurrentLocation, submitDeliveryProof } from './DriverData';
 
 export default function DriverTripsScreen() {
   const { currentUser } = useAuth();
@@ -32,7 +33,19 @@ export default function DriverTripsScreen() {
     finally { setBusyId(null); }
   }
 
-  return <FlatList data={trips} refreshing={loading} onRefresh={loadTrips} keyExtractor={(trip) => String(trip.id)} contentContainerStyle={styles.list} ListEmptyComponent={<Text style={styles.empty}>No trips assigned yet.</Text>} renderItem={({ item }) => <View style={styles.item}><Text style={styles.itemTitle}>Trip #{item.id}</Text><Text style={styles.itemText}>Material: {item.material_type || '-'}</Text><Text style={styles.itemText}>Quantity: {item.quantity || 0} {item.unit || ''}</Text><Text style={styles.itemText}>Vehicle: {item.plate || '-'}</Text><Text style={styles.itemText}>Amount: SAR {Number(item.rate_per_trip || 0).toLocaleString()}</Text><Text style={styles.status}>{item.status}</Text>{item.delivery_photo ? <Image source={{ uri: item.delivery_photo }} style={styles.photo} /> : item.status !== 'delivered' ? <TouchableOpacity style={styles.button} disabled={busyId === item.id} onPress={() => addDeliveryPhoto(item)}><Text style={styles.buttonText}>{busyId === item.id ? 'Uploading...' : 'Add delivery photo'}</Text></TouchableOpacity> : <Text style={styles.proof}>Delivered</Text>}</View>} />;
+  async function shareLocation(trip) {
+    const permission = await Location.requestForegroundPermissionsAsync();
+    if (!permission.granted) return Alert.alert('Location permission needed', 'Allow location access to share your vehicle position with dispatch.');
+    setBusyId(`location-${trip.id}`);
+    try {
+      const position = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      await submitCurrentLocation(currentUser.token, trip.vehicle_id, position.coords);
+      Alert.alert('Location shared', 'Dispatch can now see your latest vehicle position.');
+    } catch (error) { Alert.alert('Location unavailable', error.message); }
+    finally { setBusyId(null); }
+  }
+
+  return <FlatList data={trips} refreshing={loading} onRefresh={loadTrips} keyExtractor={(trip) => String(trip.id)} contentContainerStyle={styles.list} ListEmptyComponent={<Text style={styles.empty}>No trips assigned yet.</Text>} renderItem={({ item }) => <View style={styles.item}><Text style={styles.itemTitle}>Trip #{item.id}</Text><Text style={styles.itemText}>Material: {item.material_type || '-'}</Text><Text style={styles.itemText}>Quantity: {item.quantity || 0} {item.unit || ''}</Text><Text style={styles.itemText}>Vehicle: {item.plate || '-'}</Text><Text style={styles.itemText}>Amount: SAR {Number(item.rate_per_trip || 0).toLocaleString()}</Text><Text style={styles.status}>{item.status}</Text>{item.status !== 'delivered' ? <TouchableOpacity style={styles.locationButton} disabled={busyId === `location-${item.id}`} onPress={() => shareLocation(item)}><Text style={styles.buttonText}>{busyId === `location-${item.id}` ? 'Sharing location...' : 'Share current location'}</Text></TouchableOpacity> : null}{item.delivery_photo ? <Image source={{ uri: item.delivery_photo }} style={styles.photo} /> : item.status !== 'delivered' ? <TouchableOpacity style={styles.button} disabled={busyId === item.id} onPress={() => addDeliveryPhoto(item)}><Text style={styles.buttonText}>{busyId === item.id ? 'Uploading...' : 'Add delivery photo'}</Text></TouchableOpacity> : <Text style={styles.proof}>Delivered</Text>}</View>} />;
 }
 
 const styles = StyleSheet.create({
@@ -43,6 +56,7 @@ const styles = StyleSheet.create({
   itemText: { fontSize: 14, color: '#64748b', marginBottom: 4 },
   status: { color: '#2563eb', fontWeight: '800', marginTop: 6, textTransform: 'capitalize' },
   button: { backgroundColor: '#2563eb', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 12 },
+  locationButton: { backgroundColor: '#0f766e', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 12 },
   buttonText: { color: '#fff', fontWeight: '800' },
   photo: { height: 150, borderRadius: 10, marginTop: 12 },
   proof: { color: '#16a34a', fontWeight: '800', marginTop: 12 },
