@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
 import { API_BASE_URL } from '../config';
+import { stopBackgroundLocationTracking } from '../screens/driver/BackgroundLocation';
 
 const AuthContext = createContext(null);
 
@@ -24,7 +25,10 @@ export function AuthProvider({ children }) {
     return payload.user;
   };
 
-  const logout = () => setCurrentUser(null);
+  const logout = async () => {
+    await stopBackgroundLocationTracking();
+    setCurrentUser(null);
+  };
 
   const value = useMemo(
     () => ({

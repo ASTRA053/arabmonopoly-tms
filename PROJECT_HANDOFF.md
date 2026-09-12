@@ -71,6 +71,8 @@ Important driver endpoints:
 
 - `GET /api/trips/mine`: returns trips assigned to the authenticated driver
 - `PATCH /api/trips/:id/delivery-proof`: accepts a delivery photo and marks the driver's trip delivered
+- `POST /api/locations`: records a foreground or background GPS update for the driver's assigned active vehicle
+- `GET /api/audit`: returns recent operational audit events to authenticated administrators and dispatchers
 
 Delivery proof metadata is stored in the `delivery_proofs` table. Photos are uploaded to configured S3-compatible object storage and only their public URL is stored in PostgreSQL.
 
@@ -241,6 +243,9 @@ Driver mobile workflow:
 5. The app sends the photo to the backend.
 6. The trip is marked delivered.
 7. The laptop dashboard sees the updated delivery and totals.
+8. During an active trip, the driver can start background tracking from My trips and stop it when the trip ends. Android displays an ongoing tracking notification while this is active.
+
+Background tracking requires an installed Android build, not Expo Go. The driver must grant foreground and all-the-time location permissions. The app records updates after approximately 150 metres of movement or 60 seconds, subject to Android battery and location-service limits.
 
 Expo project:
 
@@ -424,7 +429,7 @@ npm run lint
 - The free Render service may sleep when idle.
 - The free Neon database has plan limits.
 - Delivery photo uploads require S3-compatible object-storage variables on Render.
-- GPS/live map tracking is not implemented.
+- Background GPS tracking is opt-in and stops if Android terminates the app; device power-saving settings can also affect updates.
 - Full production role permissions should be expanded beyond the current admin/driver route guards.
 - The admin UI has broad CRUD coverage, but some edit/delete flows still need deeper lifecycle handling.
 - The current public APK uses the Render API and must be rebuilt whenever the public API URL changes.
@@ -439,6 +444,6 @@ npm run lint
 5. Test driver login, assigned trip display, delivery photo upload, and laptop totals.
 6. Deploy the web admin to Netlify or Cloudflare Pages using `VITE_API_URL`.
 7. Choose an S3-compatible provider and configure the six object-storage variables on Render.
-8. Add mobile background location capture using `/api/locations`.
-9. Review audit logs through `/api/audit`.
-10. Run and review Dependabot pull requests.
+8. Install Android build version 5 before using background location tracking.
+9. Review operational activity through the laptop Audit screen, backed by `/api/audit`.
+10. Review Dependabot pull requests when GitHub creates them. No Dependabot pull requests were open on 12 September 2026.

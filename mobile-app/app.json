@@ -5,11 +5,14 @@
     "version": "1.0.0",
     "android": {
       "package": "com.arabmonopoly.logistics",
-      "versionCode": 4,
+      "versionCode": 5,
       "usesCleartextTraffic": true,
       "permissions": [
         "ACCESS_COARSE_LOCATION",
-        "ACCESS_FINE_LOCATION"
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION"
       ]
     },
     "web": {
@@ -18,7 +21,14 @@
     "plugins": [
       "expo-splash-screen",
       "expo-status-bar",
-      "expo-font"
+      "expo-font",
+      [
+        "expo-location",
+        {
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
+        }
+      ]
     ],
     "extra": {
       "eas": {

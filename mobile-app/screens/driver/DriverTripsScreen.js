@@ -4,12 +4,14 @@ import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import { useAuth } from '../../context/AuthContext';
 import { fetchMyTrips, submitCurrentLocation, submitDeliveryProof } from './DriverData';
+import { isBackgroundLocationTracking, startBackgroundLocationTracking, stopBackgroundLocationTracking } from './BackgroundLocation';
 
 export default function DriverTripsScreen() {
   const { currentUser } = useAuth();
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState(null);
+  const [tracking, setTracking] = useState(false);
 
   const loadTrips = useCallback(async () => {
     setLoading(true);
@@ -18,6 +20,7 @@ export default function DriverTripsScreen() {
     finally { setLoading(false); }
   }, [currentUser?.token]);
   useEffect(() => { loadTrips(); }, [loadTrips]);
+  useEffect(() => { isBackgroundLocationTracking().then(setTracking).catch(() => setTracking(false)); }, []);
 
   async function addDeliveryPhoto(trip) {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -45,7 +48,24 @@ export default function DriverTripsScreen() {
     finally { setBusyId(null); }
   }
 
-  return <FlatList data={trips} refreshing={loading} onRefresh={loadTrips} keyExtractor={(trip) => String(trip.id)} contentContainerStyle={styles.list} ListEmptyComponent={<Text style={styles.empty}>No trips assigned yet.</Text>} renderItem={({ item }) => <View style={styles.item}><Text style={styles.itemTitle}>Trip #{item.id}</Text><Text style={styles.itemText}>Material: {item.material_type || '-'}</Text><Text style={styles.itemText}>Quantity: {item.quantity || 0} {item.unit || ''}</Text><Text style={styles.itemText}>Vehicle: {item.plate || '-'}</Text><Text style={styles.itemText}>Amount: SAR {Number(item.rate_per_trip || 0).toLocaleString()}</Text><Text style={styles.status}>{item.status}</Text>{item.status !== 'delivered' ? <TouchableOpacity style={styles.locationButton} disabled={busyId === `location-${item.id}`} onPress={() => shareLocation(item)}><Text style={styles.buttonText}>{busyId === `location-${item.id}` ? 'Sharing location...' : 'Share current location'}</Text></TouchableOpacity> : null}{item.delivery_photo ? <Image source={{ uri: item.delivery_photo }} style={styles.photo} /> : item.status !== 'delivered' ? <TouchableOpacity style={styles.button} disabled={busyId === item.id} onPress={() => addDeliveryPhoto(item)}><Text style={styles.buttonText}>{busyId === item.id ? 'Uploading...' : 'Add delivery photo'}</Text></TouchableOpacity> : <Text style={styles.proof}>Delivered</Text>}</View>} />;
+  async function toggleBackgroundTracking(trip) {
+    setBusyId(`tracking-${trip.id}`);
+    try {
+      if (tracking) {
+        await stopBackgroundLocationTracking();
+        setTracking(false);
+        Alert.alert('Tracking stopped', 'Your location is no longer shared in the background.');
+      } else {
+        Alert.alert('Background tracking', 'Allow all-the-time location access in Android settings so dispatch can track this active trip.');
+        await startBackgroundLocationTracking(currentUser.token, trip.vehicle_id);
+        setTracking(true);
+        Alert.alert('Tracking started', 'Location will be shared while this active trip is running.');
+      }
+    } catch (error) { Alert.alert('Tracking unavailable', error.message); }
+    finally { setBusyId(null); }
+  }
+
+  return <FlatList data={trips} refreshing={loading} onRefresh={loadTrips} keyExtractor={(trip) => String(trip.id)} contentContainerStyle={styles.list} ListEmptyComponent={<Text style={styles.empty}>No trips assigned yet.</Text>} renderItem={({ item }) => <View style={styles.item}><Text style={styles.itemTitle}>Trip #{item.id}</Text><Text style={styles.itemText}>Material: {item.material_type || '-'}</Text><Text style={styles.itemText}>Quantity: {item.quantity || 0} {item.unit || ''}</Text><Text style={styles.itemText}>Vehicle: {item.plate || '-'}</Text><Text style={styles.itemText}>Amount: SAR {Number(item.rate_per_trip || 0).toLocaleString()}</Text><Text style={styles.status}>{item.status}</Text>{item.status !== 'delivered' ? <><TouchableOpacity style={styles.locationButton} disabled={busyId === `location-${item.id}`} onPress={() => shareLocation(item)}><Text style={styles.buttonText}>{busyId === `location-${item.id}` ? 'Sharing location...' : 'Share current location'}</Text></TouchableOpacity><TouchableOpacity style={[styles.trackingButton, tracking && styles.trackingActive]} disabled={busyId === `tracking-${item.id}`} onPress={() => toggleBackgroundTracking(item)}><Text style={styles.buttonText}>{busyId === `tracking-${item.id}` ? 'Updating tracking...' : tracking ? 'Stop background tracking' : 'Start background tracking'}</Text></TouchableOpacity></> : null}{item.delivery_photo ? <Image source={{ uri: item.delivery_photo }} style={styles.photo} /> : item.status !== 'delivered' ? <TouchableOpacity style={styles.button} disabled={busyId === item.id} onPress={() => addDeliveryPhoto(item)}><Text style={styles.buttonText}>{busyId === item.id ? 'Uploading...' : 'Add delivery photo'}</Text></TouchableOpacity> : <Text style={styles.proof}>Delivered</Text>}</View>} />;
 }
 
 const styles = StyleSheet.create({
@@ -57,6 +77,8 @@ const styles = StyleSheet.create({
   status: { color: '#2563eb', fontWeight: '800', marginTop: 6, textTransform: 'capitalize' },
   button: { backgroundColor: '#2563eb', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 12 },
   locationButton: { backgroundColor: '#0f766e', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 12 },
+  trackingButton: { backgroundColor: '#334155', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 8 },
+  trackingActive: { backgroundColor: '#b91c1c' },
   buttonText: { color: '#fff', fontWeight: '800' },
   photo: { height: 150, borderRadius: 10, marginTop: 12 },
   proof: { color: '#16a34a', fontWeight: '800', marginTop: 12 },

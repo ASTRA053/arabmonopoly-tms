@@ -20,7 +20,7 @@ const defaultSummary = {
 
 const navItems = [
   ['Overview', '⌂'], ['Trips', '↗'], ['Fleet', '▣'],
-  ['Drivers', '♙'], ['Users', '♚'], ['Loads', '▤'], ['Customers', '◎'], ['Fuel', '◉'], ['Payments', '◇'], ['Expenses', '✦'], ['Reports', '▥'], ['Settings', '⚙'],
+  ['Drivers', '♙'], ['Users', '♚'], ['Loads', '▤'], ['Customers', '◎'], ['Fuel', '◉'], ['Payments', '◇'], ['Expenses', '✦'], ['Audit', '◷'], ['Reports', '▥'], ['Settings', '⚙'],
 ]
 
 const API = import.meta.env.VITE_API_URL || (window.location.protocol === 'file:' ? 'https://arabmonopoly-api.onrender.com/api' : `${window.location.protocol}//${window.location.hostname}:4000/api`)
@@ -176,6 +176,25 @@ function ReportsView({ summary }) {
   </div>
 }
 
+function AuditLogView({ token }) {
+  const [entries, setEntries] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  const loadEntries = useCallback(async () => {
+    setLoading(true); setError('')
+    try {
+      const response = await fetch(`${API}/audit?limit=100`, { headers: authHeaders(token) })
+      const payload = await response.json().catch(() => ([]))
+      if (!response.ok) throw new Error(payload.error || 'Could not load audit logs.')
+      setEntries(payload)
+    } catch (requestError) { setError(requestError.message) } finally { setLoading(false) }
+  }, [token])
+
+  useEffect(() => { loadEntries() }, [loadEntries])
+  return <div className="content-wrap module-wrap"><section className="module-header"><div><p className="eyebrow">OPERATIONS / AUDIT</p><h1>Audit log<span className="title-accent">.</span></h1><p className="lede">Review account, trip, fuel, delivery-proof and location activity.</p></div><button className="outline-button refresh-button" onClick={loadEntries}>↻ Refresh</button></section><section className="panel records-panel"><div className="panel-heading"><div><h2>Recent activity</h2><p>{loading ? 'Loading secure audit records...' : `${entries.length} records returned`}</p></div></div>{error && <div className="api-error">{error}</div>}<div className="table-wrap module-table"><table><thead><tr><th>TIME</th><th>ACTOR</th><th>ACTION</th><th>ENTITY</th></tr></thead><tbody>{entries.map((entry) => <tr key={entry.id}><td>{new Date(entry.created_at).toLocaleString()}</td><td>{entry.actor_name || 'System'}</td><td>{entry.action}</td><td>{entry.entity_type}{entry.entity_id ? ` #${entry.entity_id}` : ''}</td></tr>)}{!loading && !entries.length && <tr><td className="empty-cell" colSpan="4">No audit records found.</td></tr>}</tbody></table></div></section></div>
+}
+
 function SettingsView() {
   return <div className="content-wrap module-wrap">
     <section className="module-header"><div><p className="eyebrow">CONTROL / SETTINGS</p><h1>System preferences<span className="title-accent">.</span></h1><p className="lede">Configure team access, operational alerts and integrations.</p></div></section>
@@ -304,7 +323,7 @@ function App() {
 
           <section className="dashboard-grid lower-grid"><article className="panel table-panel"><div className="panel-heading"><div><h2>Recent trips</h2><p>Latest movement across your network</p></div><button className="filter-button">All trips <span>⌄</span></button></div><div className="table-wrap"><table><thead><tr><th>TRIP ID</th><th>ROUTE</th><th>DRIVER</th><th>STATUS</th><th>TIME</th></tr></thead><tbody>{trips.map((trip) => <tr key={trip.id}><td><strong>{trip.id}</strong><small>{trip.vehicle}</small></td><td>{trip.route}</td><td>{trip.driver}</td><td><span className={`status-pill ${trip.tone}`}><i />{trip.status}</span></td><td className="time-cell">{trip.time}</td></tr>)}</tbody></table></div></article><article className="panel vehicles-panel"><div className="panel-heading"><div><h2>Fleet pulse</h2><p>Vehicles needing attention</p></div><button className="text-button">View fleet <span>→</span></button></div><div className="vehicle-list">{fleet.map((vehicle) => <div className="vehicle-row" key={vehicle.plate}><span className={`vehicle-icon ${vehicle.tone}`}>▣</span><span><strong>{vehicle.plate}</strong><small>{vehicle.model}</small></span><span className="vehicle-state"><b className={`state-dot ${vehicle.tone}`} />{vehicle.state}<small>{vehicle.detail}</small></span></div>)}</div></article></section>
           <footer className="footer"><span>© 2026 Arabmonopoly Logistics</span><span>System status <i className="online-dot" /> All systems operational</span></footer>
-        </div> : view === 'Reports' ? <ReportsView summary={summary} /> : view === 'Settings' ? <SettingsView /> : view === 'Users' ? <UserManagementView token={session.token} /> : <ManagementView module={view} token={session.token} />}
+        </div> : view === 'Reports' ? <ReportsView summary={summary} /> : view === 'Settings' ? <SettingsView /> : view === 'Audit' ? <AuditLogView token={session.token} /> : view === 'Users' ? <UserManagementView token={session.token} /> : <ManagementView module={view} token={session.token} />}
       </main>
     </div>
   )
