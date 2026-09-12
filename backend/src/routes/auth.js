@@ -5,22 +5,6 @@ import { pool } from '../db.js';
 
 const router = Router();
 
-router.post('/register', async (req, res) => {
-  try {
-    const { name, email, password, role, driver_id } = req.body;
-    const hash = await bcrypt.hash(password, 10);
-    const { rows } = await pool.query(
-      `INSERT INTO users (name, email, password_hash, role, driver_id)
-       VALUES ($1, $2, $3, $4, $5) RETURNING id, name, email, role, driver_id`,
-      [name, email, hash, role, driver_id || null]
-    );
-    res.status(201).json(rows[0]);
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: 'Registration failed' });
-  }
-});
-
 router.post('/login', async (req, res) => {
   try {
     const { email, password } = req.body;
