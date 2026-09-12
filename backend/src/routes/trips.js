@@ -148,13 +148,18 @@ router.patch('/:id/status', async (req, res) => {
 router.patch('/:id/delivery-proof', requireAuth, requireRole('driver'), async (req, res) => {
   const { delivery_photo, delivery_notes } = req.body;
   if (!delivery_photo) return res.status(400).json({ error: 'Delivery photo is required' });
-  const { rows } = await pool.query('SELECT id FROM trips WHERE id = $1 AND driver_id = $2', [req.params.id, req.user.driver_id]);
-  if (!rows.length) return res.status(404).json({ error: 'Trip not found for this driver' });
-  const photoUrl = await storeDeliveryPhoto(delivery_photo, `delivery-proofs/trip-${req.params.id}-${Date.now()}.jpg`);
-  await pool.query('INSERT INTO delivery_proofs (trip_id, driver_id, photo, notes) VALUES ($1, $2, $3, $4)', [req.params.id, req.user.driver_id, photoUrl, delivery_notes || null]);
-  const { rows: updated } = await pool.query(`UPDATE trips SET status = 'delivered', actual_end = NOW() WHERE id = $1 RETURNING *`, [req.params.id]);
-  await recordAudit({ actorUserId: req.user.id, action: 'delivery_proof_submitted', entityType: 'trip', entityId: req.params.id, metadata: { hasPhoto: true } });
-  res.json(updated[0]);
+  try {
+    const { rows } = await pool.query('SELECT id FROM trips WHERE id = $1 AND driver_id = $2', [req.params.id, req.user.driver_id]);
+    if (!rows.length) return res.status(404).json({ error: 'Trip not found for this driver' });
+    const photoUrl = await storeDeliveryPhoto(delivery_photo, `delivery-proofs/trip-${req.params.id}-${Date.now()}.jpg`);
+    await pool.query('INSERT INTO delivery_proofs (trip_id, driver_id, photo, notes) VALUES ($1, $2, $3, $4)', [req.params.id, req.user.driver_id, photoUrl, delivery_notes || null]);
+    const { rows: updated } = await pool.query(`UPDATE trips SET status = 'delivered', actual_end = NOW() WHERE id = $1 RETURNING *`, [req.params.id]);
+    await recordAudit({ actorUserId: req.user.id, action: 'delivery_proof_submitted', entityType: 'trip', entityId: req.params.id, metadata: { hasPhoto: true } });
+    res.json(updated[0]);
+  } catch (error) {
+    console.error('Delivery proof upload failed', error);
+    res.status(503).json({ error: 'Delivery photo storage is not configured or unavailable' });
+  }
 });
 
 export default router;
