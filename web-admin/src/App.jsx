@@ -24,6 +24,10 @@ const navItems = [
 ]
 
 const API = import.meta.env.VITE_API_URL || (window.location.protocol === 'file:' ? 'https://arabmonopoly-api.onrender.com/api' : `${window.location.protocol}//${window.location.hostname}:4000/api`)
+const authHeaders = (token, json = false) => ({
+  ...(json ? { 'Content-Type': 'application/json' } : {}),
+  ...(token ? { Authorization: `Bearer ${token}` } : {}),
+})
 const moduleConfig = {
   Trips: { endpoint: 'trips', title: 'Trip control', subtitle: 'Create and monitor every movement across your network.', columns: [['id', 'Trip'], ['driver_name', 'Driver'], ['plate', 'Vehicle'], ['status', 'Status'], ['planned_start', 'Planned start']], fields: [['load_id', 'Load ID'], ['vehicle_id', 'Vehicle ID'], ['driver_id', 'Driver ID'], ['planned_start', 'Planned start'], ['planned_end', 'Planned end'], ['rate_per_trip', 'Trip rate']] },
   Fleet: { endpoint: 'vehicles', title: 'Fleet control', subtitle: 'Keep every vehicle, document and availability state in one place.', columns: [['id', 'ID'], ['plate', 'Plate'], ['model', 'Model'], ['capacity', 'Capacity'], ['status', 'Status']], fields: [['plate', 'Plate'], ['model', 'Model'], ['capacity', 'Capacity'], ['year', 'Year'], ['gps_device_id', 'GPS device ID'], ['status', 'Status']] },
@@ -35,7 +39,7 @@ const moduleConfig = {
   Expenses: { endpoint: 'expenses', title: 'Expense control', subtitle: 'Track vehicle and driver expenses before approval and settlement.', columns: [['id', 'ID'], ['type', 'Type'], ['amount', 'Amount'], ['expense_date', 'Date'], ['approved', 'Approved']], fields: [['vehicle_id', 'Vehicle ID'], ['driver_id', 'Driver ID'], ['type', 'Expense type'], ['amount', 'Amount'], ['expense_date', 'Expense date'], ['receipt_url', 'Receipt URL'], ['approved', 'Approved']] },
 }
 
-function ManagementView({ module }) {
+function ManagementView({ module, token }) {
   const config = moduleConfig[module]
   const [records, setRecords] = useState([])
   const [form, setForm] = useState({})
@@ -47,13 +51,13 @@ function ManagementView({ module }) {
     setLoading(true)
     setError('')
     try {
-      const response = await fetch(`${API}/${config.endpoint}`)
+      const response = await fetch(`${API}/${config.endpoint}`, { headers: authHeaders(token) })
       if (!response.ok) throw new Error('Could not load data from the API.')
       setRecords(await response.json())
     } catch (requestError) {
       setError(`${requestError.message} Start the backend on port 4000 to use live controls.`)
     } finally { setLoading(false) }
-  }, [config.endpoint])
+  }, [config.endpoint, token])
 
   useEffect(() => { loadRecords() }, [loadRecords])
 
@@ -62,7 +66,7 @@ function ManagementView({ module }) {
     setSaving(true)
     setError('')
     try {
-      const response = await fetch(`${API}/${config.endpoint}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const response = await fetch(`${API}/${config.endpoint}`, { method: 'POST', headers: authHeaders(token, true), body: JSON.stringify(form) })
       if (!response.ok) throw new Error('The record could not be created.')
       setForm({})
       await loadRecords()
@@ -74,7 +78,7 @@ function ManagementView({ module }) {
       if (module === 'Trips') {
         const response = await fetch(`${API}/trips/${recordId}/status`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(token, true),
           body: JSON.stringify({ status: nextStatus })
         })
         if (!response.ok) throw new Error('Trip status could not be updated.')
@@ -83,7 +87,7 @@ function ManagementView({ module }) {
       if (module === 'Payments') {
         const response = await fetch(`${API}/payments/${recordId}`, {
           method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          headers: authHeaders(token, true),
           body: JSON.stringify({ status: nextStatus, paid_at: new Date().toISOString() })
         })
         if (!response.ok) throw new Error('Payment status could not be updated.')
@@ -121,7 +125,7 @@ function ManagementView({ module }) {
   </div>
 }
 
-function UserManagementView() {
+function UserManagementView({ token }) {
   const [form, setForm] = useState({ role: 'driver' })
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -130,7 +134,7 @@ function UserManagementView() {
   async function createUser(event) {
     event.preventDefault(); setSaving(true); setMessage(''); setError('')
     try {
-      const response = await fetch(`${API}/auth/register`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
+      const response = await fetch(`${API}/users`, { method: 'POST', headers: authHeaders(token, true), body: JSON.stringify(form) })
       const payload = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(payload.error || 'User could not be created.')
       setMessage(`${payload.name} account created. The driver can now log in on mobile.`)
@@ -182,11 +186,44 @@ function SettingsView() {
   </div>
 }
 
+function LoginView({ onLogin }) {
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  async function signIn(event) {
+    event.preventDefault(); setLoading(true); setError('')
+    try {
+      const response = await fetch(`${API}/auth/login`, { method: 'POST', headers: authHeaders(null, true), body: JSON.stringify({ email, password }) })
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || 'Sign-in failed.')
+      if (!['admin', 'dispatcher'].includes(payload.user?.role)) throw new Error('This account does not have laptop control access.')
+      onLogin(payload)
+    } catch (requestError) { setError(requestError.message) } finally { setLoading(false) }
+  }
+
+  return <main className="main-content"><div className="content-wrap module-wrap"><section className="module-header"><div><p className="eyebrow">ARABMONOPOLY LOGISTICS</p><h1>Admin sign in<span className="title-accent">.</span></h1><p className="lede">Use your administrator account to control fleet operations.</p></div></section><section className="panel form-panel"><form onSubmit={signIn}><label>Email<input required type="email" value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>Password<input required type="password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>{error && <div className="api-error">{error}</div>}<button className="primary-button form-submit" disabled={loading}>{loading ? 'Signing in...' : 'Sign in'}</button></form></section></div></main>
+}
+
 function App() {
   const [view, setView] = useState('Overview')
+  const [session, setSession] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('arabmonopoly-admin-session')) } catch { return null }
+  })
   const [summary, setSummary] = useState(defaultSummary)
   const [summaryLoading, setSummaryLoading] = useState(true)
   const [summaryError, setSummaryError] = useState('')
+
+  function handleLogin(nextSession) {
+    setSession(nextSession)
+    localStorage.setItem('arabmonopoly-admin-session', JSON.stringify(nextSession))
+  }
+
+  function signOut() {
+    setSession(null)
+    localStorage.removeItem('arabmonopoly-admin-session')
+  }
 
   const loadSummary = useCallback(async () => {
     setSummaryLoading(true)
@@ -220,6 +257,8 @@ function App() {
     { title: 'Network health', detail: 'No operational exceptions detected right now.', severity: 'green', action: 'View' }
   ]
 
+  if (!session?.token) return <LoginView onLogin={handleLogin} />
+
   return (
     <div className="app-shell">
       <aside className="sidebar">
@@ -230,8 +269,8 @@ function App() {
           {navItems.map(([label, icon]) => <button onClick={() => setView(label)} className={`nav-item ${view === label ? 'active' : ''}`} key={label}><span className="nav-icon">{icon}</span>{label}{label === 'Payments' && <span className="nav-badge">3</span>}</button>)}
         </nav>
         <div className="sidebar-bottom">
-          <button className="nav-item"><span className="nav-icon">⚙</span>Settings</button>
-          <div className="user-card"><span className="avatar">AH</span><span><strong>Ahmed</strong><small>Administrator</small></span><span className="more">•••</span></div>
+          <button className="nav-item" onClick={() => setView('Settings')}><span className="nav-icon">⚙</span>Settings</button>
+          <button className="user-card" onClick={signOut}><span className="avatar">{session.user?.name?.slice(0, 2).toUpperCase() || 'AD'}</span><span><strong>{session.user?.name || 'Administrator'}</strong><small>Sign out</small></span><span className="more">•••</span></button>
         </div>
       </aside>
 
@@ -265,7 +304,7 @@ function App() {
 
           <section className="dashboard-grid lower-grid"><article className="panel table-panel"><div className="panel-heading"><div><h2>Recent trips</h2><p>Latest movement across your network</p></div><button className="filter-button">All trips <span>⌄</span></button></div><div className="table-wrap"><table><thead><tr><th>TRIP ID</th><th>ROUTE</th><th>DRIVER</th><th>STATUS</th><th>TIME</th></tr></thead><tbody>{trips.map((trip) => <tr key={trip.id}><td><strong>{trip.id}</strong><small>{trip.vehicle}</small></td><td>{trip.route}</td><td>{trip.driver}</td><td><span className={`status-pill ${trip.tone}`}><i />{trip.status}</span></td><td className="time-cell">{trip.time}</td></tr>)}</tbody></table></div></article><article className="panel vehicles-panel"><div className="panel-heading"><div><h2>Fleet pulse</h2><p>Vehicles needing attention</p></div><button className="text-button">View fleet <span>→</span></button></div><div className="vehicle-list">{fleet.map((vehicle) => <div className="vehicle-row" key={vehicle.plate}><span className={`vehicle-icon ${vehicle.tone}`}>▣</span><span><strong>{vehicle.plate}</strong><small>{vehicle.model}</small></span><span className="vehicle-state"><b className={`state-dot ${vehicle.tone}`} />{vehicle.state}<small>{vehicle.detail}</small></span></div>)}</div></article></section>
           <footer className="footer"><span>© 2026 Arabmonopoly Logistics</span><span>System status <i className="online-dot" /> All systems operational</span></footer>
-        </div> : view === 'Reports' ? <ReportsView summary={summary} /> : view === 'Settings' ? <SettingsView /> : view === 'Users' ? <UserManagementView /> : <ManagementView module={view} />}
+        </div> : view === 'Reports' ? <ReportsView summary={summary} /> : view === 'Settings' ? <SettingsView /> : view === 'Users' ? <UserManagementView token={session.token} /> : <ManagementView module={view} token={session.token} />}
       </main>
     </div>
   )
