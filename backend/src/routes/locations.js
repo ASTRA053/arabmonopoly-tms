@@ -5,9 +5,8 @@ import { recordAudit } from '../audit.js';
 import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
-router.use(standardRateLimit);
 
-router.post('/', requireAuth, requireRole('admin', 'dispatcher', 'driver'), async (req, res) => {
+router.post('/', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher', 'driver'), async (req, res) => {
   const { vehicle_id, latitude, longitude } = req.body;
   if (!vehicle_id || !Number.isFinite(Number(latitude)) || !Number.isFinite(Number(longitude))) {
     return res.status(400).json({ error: 'vehicle_id, latitude and longitude are required' });
@@ -25,7 +24,7 @@ router.post('/', requireAuth, requireRole('admin', 'dispatcher', 'driver'), asyn
   res.status(201).json(rows[0]);
 });
 
-router.get('/latest', requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
+router.get('/latest', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   const { rows } = await pool.query(`
     SELECT DISTINCT ON (vl.vehicle_id) vl.*, v.plate
     FROM vehicle_locations vl LEFT JOIN vehicles v ON v.id = vl.vehicle_id

@@ -4,9 +4,9 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
-router.use(standardRateLimit, requireAuth, requireRole('admin', 'dispatcher'));
+router.use(requireAuth, requireRole('admin', 'dispatcher'));
 
-router.get('/', async (req, res) => {
+router.get('/', standardRateLimit, async (req, res) => {
   const { rows } = await pool.query(
     `SELECT id, name, phone, license_no, license_expiry, contract_type, status, trip_rate, rate_type, currency, created_at
      FROM drivers
@@ -16,7 +16,7 @@ router.get('/', async (req, res) => {
   res.json(rows);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', standardRateLimit, async (req, res) => {
   const { name, phone, national_id, license_no, license_expiry, contract_type, bank_details, trip_rate, rate_type, currency } = req.body;
   const { rows } = await pool.query(
     `INSERT INTO drivers
@@ -27,7 +27,7 @@ router.post('/', async (req, res) => {
   res.status(201).json(rows[0]);
 });
 
-router.put('/:id', async (req, res) => {
+router.put('/:id', standardRateLimit, async (req, res) => {
   const { id } = req.params;
   const { name, phone, national_id, license_no, license_expiry, contract_type, bank_details, trip_rate, rate_type, currency, status } = req.body;
   const { rows } = await pool.query(

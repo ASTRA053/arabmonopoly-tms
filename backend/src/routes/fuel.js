@@ -7,9 +7,8 @@ import { storeDeliveryPhoto } from '../storage.js';
 
 const router = Router();
 const managementRoles = ['admin', 'dispatcher'];
-router.use(standardRateLimit);
 
-router.get('/', requireAuth, requireRole(...managementRoles), async (req, res) => {
+router.get('/', standardRateLimit, requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { vehicle_id, driver_id } = req.query;
   try {
     const conditions = [];
@@ -41,7 +40,7 @@ router.get('/', requireAuth, requireRole(...managementRoles), async (req, res) =
   }
 });
 
-router.post('/', requireAuth, requireRole('admin', 'dispatcher', 'driver'), async (req, res) => {
+router.post('/', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher', 'driver'), async (req, res) => {
   const { vehicle_id, driver_id, log_date, station, liters, price_per_liter, total_cost, odometer, notes, fuel_photo } = req.body;
   const submittingDriverId = req.user.role === 'driver' ? req.user.driver_id : driver_id;
   if (!vehicle_id || !log_date || !station || !Number(liters) || !Number(price_per_liter) || !Number(total_cost) || !fuel_photo) {

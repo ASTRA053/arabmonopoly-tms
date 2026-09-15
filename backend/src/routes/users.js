@@ -6,14 +6,14 @@ import { recordAudit } from '../audit.js';
 import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
-router.use(standardRateLimit, requireAuth, requireRole('admin'));
+router.use(requireAuth, requireRole('admin'));
 
-router.get('/', async (req, res) => {
+router.get('/', standardRateLimit, async (req, res) => {
   const { rows } = await pool.query(`SELECT id, name, email, role, driver_id, created_at FROM users ORDER BY id DESC`);
   res.json(rows);
 });
 
-router.patch('/me/password', async (req, res) => {
+router.patch('/me/password', standardRateLimit, async (req, res) => {
   const { current_password, new_password } = req.body;
   if (!current_password || !new_password || new_password.length < 12) {
     return res.status(400).json({ error: 'Current password and a new password of at least 12 characters are required' });
@@ -28,7 +28,7 @@ router.patch('/me/password', async (req, res) => {
   res.status(204).end();
 });
 
-router.patch('/:id/password', async (req, res) => {
+router.patch('/:id/password', standardRateLimit, async (req, res) => {
   const { new_password } = req.body;
   if (!new_password || new_password.length < 12) {
     return res.status(400).json({ error: 'A new password of at least 12 characters is required' });
@@ -40,7 +40,7 @@ router.patch('/:id/password', async (req, res) => {
   res.status(204).end();
 });
 
-router.post('/', async (req, res) => {
+router.post('/', standardRateLimit, async (req, res) => {
   const { name, email, password, role = 'driver', driver_id } = req.body;
   if (!name || !email || !password || !['admin', 'dispatcher', 'driver'].includes(role)) {
     return res.status(400).json({ error: 'Name, email, password and a valid role are required' });

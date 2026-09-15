@@ -7,9 +7,8 @@ import { storeDeliveryPhoto } from '../storage.js';
 
 const router = Router();
 const managementRoles = ['admin', 'dispatcher'];
-router.use(standardRateLimit);
 
-router.get('/', requireAuth, requireRole(...managementRoles), async (req, res) => {
+router.get('/', standardRateLimit, requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { status, driver_id, vehicle_id, date_from, date_to } = req.query;
   try {
     const conditions = [];
@@ -53,7 +52,7 @@ router.get('/', requireAuth, requireRole(...managementRoles), async (req, res) =
   }
 });
 
-router.get('/driver/:driverId', requireAuth, async (req, res) => {
+router.get('/driver/:driverId', standardRateLimit, requireAuth, async (req, res) => {
   const { driverId } = req.params;
   const { status } = req.query;
   const parsedDriverId = Number.parseInt(driverId, 10);
@@ -88,7 +87,7 @@ router.get('/driver/:driverId', requireAuth, async (req, res) => {
   }
 });
 
-router.get('/mine', requireAuth, requireRole('driver'), async (req, res) => {
+router.get('/mine', standardRateLimit, requireAuth, requireRole('driver'), async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT t.*, l.material_type, l.quantity, l.unit, v.plate, v.model,
@@ -104,7 +103,7 @@ router.get('/mine', requireAuth, requireRole('driver'), async (req, res) => {
   }
 });
 
-router.post('/', requireAuth, requireRole(...managementRoles), async (req, res) => {
+router.post('/', standardRateLimit, requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { load_id, vehicle_id, driver_id, planned_start, planned_end, rate_per_trip, extra_earnings } = req.body;
   try {
     const { rows } = await pool.query(
@@ -121,7 +120,7 @@ router.post('/', requireAuth, requireRole(...managementRoles), async (req, res) 
   }
 });
 
-router.patch('/:id/status', requireAuth, requireRole(...managementRoles), async (req, res) => {
+router.patch('/:id/status', standardRateLimit, requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { id } = req.params;
   const { status, actual_start, actual_end } = req.body;
   try {
@@ -158,7 +157,7 @@ router.patch('/:id/status', requireAuth, requireRole(...managementRoles), async 
   }
 });
 
-router.patch('/:id/delivery-proof', requireAuth, requireRole('driver'), async (req, res) => {
+router.patch('/:id/delivery-proof', standardRateLimit, requireAuth, requireRole('driver'), async (req, res) => {
   const { delivery_photo, delivery_notes } = req.body;
   if (!delivery_photo) return res.status(400).json({ error: 'Delivery photo is required' });
   try {

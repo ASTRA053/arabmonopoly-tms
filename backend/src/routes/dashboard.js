@@ -5,9 +5,8 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
-router.use(standardRateLimit);
 
-router.get('/summary', requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
+router.get('/summary', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   try {
     const [tripStats, paymentStats, vehicleStats, lateTripStats, onTimeStats, loadsMovedStats, kmCoveredStats, revenueStats, expiringLicensesStats, fuelVarianceStats, fuelTotalStats, driverTripStats, tripRows] = await Promise.all([
       pool.query(`

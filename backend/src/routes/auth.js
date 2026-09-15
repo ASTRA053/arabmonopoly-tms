@@ -5,9 +5,8 @@ import { pool } from '../db.js';
 import { authRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
-router.use(authRateLimit);
 
-router.post('/login', async (req, res) => {
+router.post('/login', authRateLimit, async (req, res) => {
   try {
     const { email, password } = req.body;
     const { rows } = await pool.query(
