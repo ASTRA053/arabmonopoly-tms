@@ -3,9 +3,10 @@ import bcrypt from 'bcryptjs';
 import { pool } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../audit.js';
+import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
-router.use(requireAuth, requireRole('admin'));
+router.use(standardRateLimit, requireAuth, requireRole('admin'));
 
 router.get('/', async (req, res) => {
   const { rows } = await pool.query(`SELECT id, name, email, role, driver_id, created_at FROM users ORDER BY id DESC`);

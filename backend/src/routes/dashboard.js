@@ -2,8 +2,10 @@ import { Router } from 'express';
 import { pool } from '../db.js';
 import { buildDashboardSummary } from '../dashboardSummary.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
+router.use(standardRateLimit);
 
 router.get('/summary', requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   try {

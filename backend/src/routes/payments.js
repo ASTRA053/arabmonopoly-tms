@@ -1,9 +1,11 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
 const managementRoles = ['admin', 'dispatcher'];
+router.use(standardRateLimit);
 
 router.get('/', requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { driver_id, status } = req.query;

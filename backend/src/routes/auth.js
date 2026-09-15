@@ -2,8 +2,10 @@ import { Router } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db.js';
+import { authRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
+router.use(authRateLimit);
 
 router.post('/login', async (req, res) => {
   try {

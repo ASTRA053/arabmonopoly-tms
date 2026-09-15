@@ -1,8 +1,11 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
+router.use(standardRateLimit);
+
 router.get('/', requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   const limit = Math.min(Number(req.query.limit) || 100, 500);
   const { rows } = await pool.query(

@@ -2,8 +2,10 @@ import { Router } from 'express';
 import { pool } from '../db.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { recordAudit } from '../audit.js';
+import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
+router.use(standardRateLimit);
 
 router.post('/', requireAuth, requireRole('admin', 'dispatcher', 'driver'), async (req, res) => {
   const { vehicle_id, latitude, longitude } = req.body;
