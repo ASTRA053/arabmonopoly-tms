@@ -1,9 +1,12 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
+const managementRoles = ['admin', 'dispatcher'];
 
-router.get('/', async (req, res) => {
+router.get('/', standardRateLimit, requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { driver_id, status } = req.query;
   try {
     const conditions = [];
@@ -34,7 +37,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', standardRateLimit, requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { driver_id, trip_id, period_start, period_end, earnings, deductions, net_pay } = req.body;
   try {
     const { rows } = await pool.query(
@@ -50,7 +53,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.post('/settlement', async (req, res) => {
+router.post('/settlement', standardRateLimit, requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { driver_id, period_start, period_end } = req.body;
   try {
     const tripSum = await pool.query(
@@ -86,7 +89,7 @@ router.post('/settlement', async (req, res) => {
   }
 });
 
-router.patch('/:id', async (req, res) => {
+router.patch('/:id', standardRateLimit, requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { id } = req.params;
   const { status, paid_at } = req.body;
   try {

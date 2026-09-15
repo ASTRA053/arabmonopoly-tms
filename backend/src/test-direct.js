@@ -2,22 +2,25 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 
-// Try connecting as the "user" role with the password we set
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set before running this script`);
+  }
+  return value;
+}
+
 const userPool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'tms_db',
-  user: 'user',
-  password: 'Aa123456',
+  connectionString: requireEnv('DATABASE_URL'),
 });
 
 async function testUser() {
   const client = await userPool.connect();
   try {
     await client.query('SELECT NOW()');
-    console.log('SUCCESS: user/Aa123456 can connect to tms_db');
+    console.log('SUCCESS: the configured database connection works');
   } catch (err) {
-    console.error('FAILED for user/Aa123456:', err.message);
+    console.error('FAILED to connect with the configured database connection:', err.message);
   } finally {
     client.release();
     await userPool.end();

@@ -2,17 +2,25 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set before running this script`);
+  }
+  return value;
+}
+
 const adminPool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'postgres',
-  user: 'postgres',
-  password: 'Aa123456', // postgres superuser password
+  connectionString: requireEnv('POSTGRES_ADMIN_DATABASE_URL'),
 });
 
 async function fixUser() {
-  const targetUser = 'user';
-  const newPassword = 'Aa123456'; // password you want for "user"
+  const targetUser = process.env.DB_APP_USER || 'user';
+  const targetDatabase = process.env.DB_APP_DATABASE || 'tms_db';
+  const newPassword = requireEnv('DB_APP_PASSWORD');
+  const escapedUser = targetUser.replace(/"/g, '""');
+  const escapedPassword = newPassword.replace(/'/g, "''");
+  const escapedDatabase = targetDatabase.replace(/"/g, '""');
 
   const client = await adminPool.connect();
   try {
@@ -25,28 +33,29 @@ async function fixUser() {
     if (res.rows.length === 0) {
       console.log(`User "${targetUser}" not found, creating...`);
       await client.query(
-        `CREATE USER "${targetUser}" WITH PASSWORD '${newPassword.replace(/'/g, "''")}'`
+        `CREATE USER "${escapedUser}" WITH PASSWORD '${escapedPassword}'`
       );
-      await client.query(`GRANT ALL PRIVILEGES ON DATABASE tms_db TO "${targetUser}"`);
-      console.log(`User "${targetUser}" created and granted access to tms_db`);
+      await client.query(`GRANT ALL PRIVILEGES ON DATABASE "${escapedDatabase}" TO "${escapedUser}"`);
+      console.log(`User "${targetUser}" created and granted access to "${targetDatabase}"`);
     } else {
       console.log(`User "${targetUser}" exists, resetting password...`);
       await client.query(
-        `ALTER USER "${targetUser}" WITH PASSWORD '${newPassword.replace(/'/g, "''")}'`
+        `ALTER USER "${escapedUser}" WITH PASSWORD '${escapedPassword}'`
       );
       console.log(`Password for "${targetUser}" updated`);
     }
 
-    // Also make sure tms_db exists
+    // Also make sure the application database exists
     const dbRes = await client.query(
-      `SELECT 1 FROM pg_database WHERE datname = 'tms_db'`
+      `SELECT 1 FROM pg_database WHERE datname = $1`,
+      [targetDatabase]
     );
     if (dbRes.rows.length === 0) {
-      console.log('Database tms_db not found, creating...');
-      await client.query(`CREATE DATABASE tms_db`);
-      console.log('Database tms_db created');
+      console.log(`Database "${targetDatabase}" not found, creating...`);
+      await client.query(`CREATE DATABASE "${escapedDatabase}"`);
+      console.log(`Database "${targetDatabase}" created`);
     } else {
-      console.log('Database tms_db exists');
+      console.log(`Database "${targetDatabase}" exists`);
     }
 
   } catch (err) {

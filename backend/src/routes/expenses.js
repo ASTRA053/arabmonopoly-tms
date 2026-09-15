@@ -1,14 +1,16 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
 
-router.get('/', async (req, res) => {
+router.get('/', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM expenses ORDER BY id DESC LIMIT 200');
   res.json(rows);
 });
 
-router.post('/', async (req, res) => {
+router.post('/', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   const { vehicle_id, driver_id, type, amount, expense_date, receipt_url, approved } = req.body;
   try {
     const { rows } = await pool.query(

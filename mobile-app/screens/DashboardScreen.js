@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { API_BASE_URL } from '../config';
+import { useAuth } from '../context/AuthContext';
 
 const emptySummary = {
   kpis: { activeTrips: 0, deliveredToday: 0, fleetUtilization: 0, pendingPayments: 0 },
@@ -10,15 +11,25 @@ const emptySummary = {
 };
 
 export default function DashboardScreen() {
+  const { currentUser } = useAuth();
   const [summary, setSummary] = useState(emptySummary);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   const loadSummary = useCallback(async (isRefresh = false) => {
+    if (!currentUser?.token) {
+      setSummary(emptySummary);
+      setError('');
+      setLoading(false);
+      setRefreshing(false);
+      return;
+    }
     if (isRefresh) setRefreshing(true); else setLoading(true);
     try {
-      const response = await fetch(`${API_BASE_URL}/dashboard/summary`);
+      const response = await fetch(`${API_BASE_URL}/dashboard/summary`, {
+        headers: { Authorization: ['Bearer', currentUser.token].join(' ') },
+      });
       if (!response.ok) throw new Error('Dashboard data could not be loaded.');
       setSummary(await response.json());
       setError('');
@@ -28,7 +39,7 @@ export default function DashboardScreen() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [currentUser?.token]);
 
   useEffect(() => { loadSummary(); }, [loadSummary]);
 
