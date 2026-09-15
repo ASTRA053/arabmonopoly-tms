@@ -19,6 +19,17 @@ import locationsRoutes from './routes/locations.js';
 import auditRoutes from './routes/audit.js';
 
 const app = express();
+
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be configured`);
+  }
+  return value;
+}
+
+requireEnv('JWT_SECRET');
+
 app.use(cors());
 app.use(express.json());
 

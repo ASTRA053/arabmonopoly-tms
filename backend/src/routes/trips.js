@@ -5,8 +5,9 @@ import { recordAudit } from '../audit.js';
 import { storeDeliveryPhoto } from '../storage.js';
 
 const router = Router();
+const managementRoles = ['admin', 'dispatcher'];
 
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { status, driver_id, vehicle_id, date_from, date_to } = req.query;
   try {
     const conditions = [];
@@ -50,9 +51,19 @@ router.get('/', async (req, res) => {
   }
 });
 
-router.get('/driver/:driverId', async (req, res) => {
+router.get('/driver/:driverId', requireAuth, async (req, res) => {
   const { driverId } = req.params;
   const { status } = req.query;
+  const parsedDriverId = Number.parseInt(driverId, 10);
+  if (!Number.isInteger(parsedDriverId)) {
+    return res.status(400).json({ error: 'Driver id must be a valid integer' });
+  }
+  if (req.user.role === 'driver' && Number(req.user.driver_id) !== parsedDriverId) {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
+  if (!managementRoles.includes(req.user.role) && req.user.role !== 'driver') {
+    return res.status(403).json({ error: 'Insufficient permissions' });
+  }
   try {
     let query = `
       SELECT t.*, l.material_type, l.quantity, l.unit, v.plate, v.model
@@ -61,7 +72,7 @@ router.get('/driver/:driverId', async (req, res) => {
       JOIN vehicles v ON t.vehicle_id = v.id
       WHERE t.driver_id = $1
     `;
-    const values = [driverId];
+    const values = [parsedDriverId];
     if (status) {
       query += ` AND t.status = $2`;
       values.push(status);
@@ -91,7 +102,7 @@ router.get('/mine', requireAuth, requireRole('driver'), async (req, res) => {
   }
 });
 
-router.post('/', async (req, res) => {
+router.post('/', requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { load_id, vehicle_id, driver_id, planned_start, planned_end, rate_per_trip, extra_earnings } = req.body;
   try {
     const { rows } = await pool.query(
@@ -108,7 +119,7 @@ router.post('/', async (req, res) => {
   }
 });
 
-router.patch('/:id/status', async (req, res) => {
+router.patch('/:id/status', requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { id } = req.params;
   const { status, actual_start, actual_end } = req.body;
   try {

@@ -5,8 +5,9 @@ import { recordAudit } from '../audit.js';
 import { storeDeliveryPhoto } from '../storage.js';
 
 const router = Router();
+const managementRoles = ['admin', 'dispatcher'];
 
-router.get('/', async (req, res) => {
+router.get('/', requireAuth, requireRole(...managementRoles), async (req, res) => {
   const { vehicle_id, driver_id } = req.query;
   try {
     const conditions = [];

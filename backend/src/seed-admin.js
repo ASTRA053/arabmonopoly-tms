@@ -9,9 +9,18 @@ const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
 
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set before seeding users`);
+  }
+  return value;
+}
+
 async function createAdmin() {
-  const email = process.env.ADMIN_EMAIL || 'admin@tms.local';
-  const password = process.env.ADMIN_PASSWORD || 'Admin1234!';
+  const email = requireEnv('ADMIN_EMAIL').toLowerCase();
+  const password = requireEnv('ADMIN_PASSWORD');
+  const name = process.env.ADMIN_NAME || 'Admin';
 
   const client = await pool.connect();
   try {
@@ -21,8 +30,8 @@ async function createAdmin() {
     );
 
     if (existing.rows.length > 0) {
-      await client.query("UPDATE users SET name = 'Ahmed', role = 'admin' WHERE email = $1", [email]);
-      console.log('Admin already exists and was renamed:', email);
+      await client.query('UPDATE users SET name = $1, role = $2 WHERE email = $3', [name, 'admin', email]);
+      console.log('Admin already exists and was updated:', email);
       return;
     }
 
@@ -32,7 +41,7 @@ async function createAdmin() {
       `INSERT INTO users (email, password_hash, name, role, created_at)
        VALUES ($1, $2, $3, $4, NOW())
        RETURNING id, email, role`,
-      [email, hashed, 'Ahmed', 'admin']
+      [email, hashed, name, 'admin']
     );
 
     console.log('Admin created:', res.rows[0]);

@@ -1,7 +1,9 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
+router.use(requireAuth, requireRole('admin', 'dispatcher'));
 
 router.get('/', async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM customers ORDER BY id DESC LIMIT 200');

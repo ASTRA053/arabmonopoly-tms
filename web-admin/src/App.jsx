@@ -142,7 +142,7 @@ function UserManagementView({ token }) {
     } catch (requestError) { setError(requestError.message) } finally { setSaving(false) }
   }
 
-  return <div className="content-wrap module-wrap"><section className="module-header"><div><p className="eyebrow">ADMINISTRATION / USERS</p><h1>Users & admins<span className="title-accent">.</span></h1><p className="lede">Create driver logins and administrator access from the laptop control center.</p></div></section><div className="module-layout"><section className="panel form-panel"><div className="panel-heading"><div><h2>Add account</h2><p>Give a driver their own secure login.</p></div></div>{message && <div className="success-message">{message}</div>}{error && <div className="api-error">{error}</div>}<form onSubmit={createUser}><label>Full name<input required value={form.name || ''} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label>Email<input required type="email" value={form.email || ''} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label><label>Temporary password<input required minLength="8" type="password" value={form.password || ''} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label><label>Role<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="driver">Driver</option><option value="dispatcher">Dispatcher</option><option value="admin">Administrator</option></select></label><label>Driver ID (required for driver login)<input value={form.driver_id || ''} onChange={(event) => setForm({ ...form, driver_id: event.target.value })} placeholder="Example: 12" /></label><button className="primary-button form-submit" disabled={saving}>{saving ? 'Creating...' : 'Create account'}</button></form></section><section className="panel form-panel"><div className="panel-heading"><div><h2>How driver access works</h2><p>Simple operational handoff</p></div></div><div className="exception-list"><div className="exception-row"><span className="exception-icon blue">1</span><span><strong>Create driver record</strong><small>Add the driver first in Drivers and note their ID.</small></span></div><div className="exception-row"><span className="exception-icon green">2</span><span><strong>Create driver account</strong><small>Use the same Driver ID and give the driver their password.</small></span></div><div className="exception-row"><span className="exception-icon amber">3</span><span><strong>Driver uses mobile</strong><small>They see only their trips, earnings and delivery photo action.</small></span></div></div></section></div></div>
+  return <div className="content-wrap module-wrap"><section className="module-header"><div><p className="eyebrow">ADMINISTRATION / USERS</p><h1>Users & admins<span className="title-accent">.</span></h1><p className="lede">Create driver logins and administrator access from the laptop control center.</p></div></section><div className="module-layout"><section className="panel form-panel"><div className="panel-heading"><div><h2>Add account</h2><p>Give a driver their own secure login.</p></div></div>{message && <div className="success-message">{message}</div>}{error && <div className="api-error">{error}</div>}<form onSubmit={createUser}><label>Full name<input required value={form.name || ''} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label>Email<input required type="email" value={form.email || ''} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label><label>Temporary password<input required minLength="12" type="password" value={form.password || ''} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label><label>Role<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="driver">Driver</option><option value="dispatcher">Dispatcher</option><option value="admin">Administrator</option></select></label><label>Driver ID (required for driver login)<input value={form.driver_id || ''} onChange={(event) => setForm({ ...form, driver_id: event.target.value })} placeholder="Example: 12" /></label><button className="primary-button form-submit" disabled={saving}>{saving ? 'Creating...' : 'Create account'}</button></form></section><section className="panel form-panel"><div className="panel-heading"><div><h2>How driver access works</h2><p>Simple operational handoff</p></div></div><div className="exception-list"><div className="exception-row"><span className="exception-icon blue">1</span><span><strong>Create driver record</strong><small>Add the driver first in Drivers and note their ID.</small></span></div><div className="exception-row"><span className="exception-icon green">2</span><span><strong>Create driver account</strong><small>Use the same Driver ID and give the driver a password with at least 12 characters.</small></span></div><div className="exception-row"><span className="exception-icon amber">3</span><span><strong>Driver uses mobile</strong><small>They see only their trips, earnings and delivery photo action.</small></span></div></div></section></div></div>
 }
 
 const trips = [
@@ -226,10 +226,16 @@ function App() {
   }
 
   const loadSummary = useCallback(async () => {
+    if (!session?.token) {
+      setSummary(defaultSummary)
+      setSummaryError('')
+      setSummaryLoading(false)
+      return
+    }
     setSummaryLoading(true)
     setSummaryError('')
     try {
-      const response = await fetch(`${API}/dashboard/summary`)
+      const response = await fetch(`${API}/dashboard/summary`, { headers: authHeaders(session.token) })
       if (!response.ok) throw new Error('Could not load dashboard summary.')
       const data = await response.json()
       setSummary(data)
@@ -239,7 +245,7 @@ function App() {
     } finally {
       setSummaryLoading(false)
     }
-  }, [])
+  }, [session?.token])
 
   useEffect(() => {
     loadSummary()

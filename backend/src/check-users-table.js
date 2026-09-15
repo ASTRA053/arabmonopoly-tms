@@ -2,12 +2,16 @@
 import pkg from 'pg';
 const { Pool } = pkg;
 
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set before running this script`);
+  }
+  return value;
+}
+
 const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'tms_db',
-  user: 'postgres',
-  password: 'Aa123456',
+  connectionString: requireEnv('DATABASE_URL'),
 });
 
 async function checkTable() {

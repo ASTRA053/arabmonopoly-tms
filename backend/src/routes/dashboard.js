@@ -1,10 +1,11 @@
 import { Router } from 'express';
 import { pool } from '../db.js';
 import { buildDashboardSummary } from '../dashboardSummary.js';
+import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/summary', async (req, res) => {
+router.get('/summary', requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   try {
     const [tripStats, paymentStats, vehicleStats, lateTripStats, onTimeStats, loadsMovedStats, kmCoveredStats, revenueStats, expiringLicensesStats, fuelVarianceStats, fuelTotalStats, driverTripStats, tripRows] = await Promise.all([
       pool.query(`
