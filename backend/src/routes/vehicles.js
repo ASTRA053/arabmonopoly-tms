@@ -4,14 +4,13 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
-router.use(requireAuth, requireRole('admin', 'dispatcher'));
 
-router.get('/', standardRateLimit, async (req, res) => {
+router.get('/', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM vehicles ORDER BY id DESC LIMIT 200');
   res.json(rows);
 });
 
-router.post('/', standardRateLimit, async (req, res) => {
+router.post('/', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   const { plate, model, capacity, year, gps_device_id, status } = req.body;
   const { rows } = await pool.query(
     `INSERT INTO vehicles (plate, model, capacity, year, gps_device_id, status)

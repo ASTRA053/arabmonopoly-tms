@@ -4,14 +4,13 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { standardRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
-router.use(requireAuth, requireRole('admin', 'dispatcher'));
 
-router.get('/', standardRateLimit, async (req, res) => {
+router.get('/', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   const { rows } = await pool.query('SELECT * FROM loads ORDER BY id DESC LIMIT 200');
   res.json(rows);
 });
 
-router.post('/', standardRateLimit, async (req, res) => {
+router.post('/', standardRateLimit, requireAuth, requireRole('admin', 'dispatcher'), async (req, res) => {
   const { customer_id, material_type, quantity, unit, rate, total_amount, status } = req.body;
   const { rows } = await pool.query(
     `INSERT INTO loads (customer_id, material_type, quantity, unit, rate, total_amount, status)
