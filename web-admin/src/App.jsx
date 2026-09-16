@@ -145,18 +145,11 @@ function UserManagementView({ token }) {
   return <div className="content-wrap module-wrap"><section className="module-header"><div><p className="eyebrow">ADMINISTRATION / USERS</p><h1>Users & admins<span className="title-accent">.</span></h1><p className="lede">Create driver logins and administrator access from the laptop control center.</p></div></section><div className="module-layout"><section className="panel form-panel"><div className="panel-heading"><div><h2>Add account</h2><p>Give a driver their own secure login.</p></div></div>{message && <div className="success-message">{message}</div>}{error && <div className="api-error">{error}</div>}<form onSubmit={createUser}><label>Full name<input required value={form.name || ''} onChange={(event) => setForm({ ...form, name: event.target.value })} /></label><label>Email<input required type="email" value={form.email || ''} onChange={(event) => setForm({ ...form, email: event.target.value })} /></label><label>Temporary password<input required minLength="8" type="password" value={form.password || ''} onChange={(event) => setForm({ ...form, password: event.target.value })} /></label><label>Role<select value={form.role} onChange={(event) => setForm({ ...form, role: event.target.value })}><option value="driver">Driver</option><option value="dispatcher">Dispatcher</option><option value="admin">Administrator</option></select></label><label>Driver ID (required for driver login)<input value={form.driver_id || ''} onChange={(event) => setForm({ ...form, driver_id: event.target.value })} placeholder="Example: 12" /></label><button className="primary-button form-submit" disabled={saving}>{saving ? 'Creating...' : 'Create account'}</button></form></section><section className="panel form-panel"><div className="panel-heading"><div><h2>How driver access works</h2><p>Simple operational handoff</p></div></div><div className="exception-list"><div className="exception-row"><span className="exception-icon blue">1</span><span><strong>Create driver record</strong><small>Add the driver first in Drivers and note their ID.</small></span></div><div className="exception-row"><span className="exception-icon green">2</span><span><strong>Create driver account</strong><small>Use the same Driver ID and give the driver their password.</small></span></div><div className="exception-row"><span className="exception-icon amber">3</span><span><strong>Driver uses mobile</strong><small>They see only their trips, earnings and delivery photo action.</small></span></div></div></section></div></div>
 }
 
-const trips = [
-  { id: 'TRP-2048', route: 'Al Khobar → Dammam', driver: 'Omar Hassan', vehicle: 'DMP 4821', status: 'In transit', tone: 'blue', time: '08:42' },
-  { id: 'TRP-2047', route: 'Jubail → Riyadh', driver: 'Faisal Nasser', vehicle: 'DMP 3910', status: 'Delivered', tone: 'green', time: '07:18' },
-  { id: 'TRP-2046', route: 'Dammam → Al Ahsa', driver: 'Yousef Ali', vehicle: 'DMP 2754', status: 'Needs review', tone: 'amber', time: '06:55' },
-  { id: 'TRP-2045', route: 'Ras Tanura → Jubail', driver: 'Khalid Saeed', vehicle: 'DMP 1842', status: 'Delivered', tone: 'green', time: 'Yesterday' },
-]
-
-const fleet = [
-  { plate: 'DMP 4821', model: 'Volvo FMX 460', state: 'On route', detail: 'Trip TRP-2048', tone: 'blue' },
-  { plate: 'DMP 3910', model: 'Scania P410', state: 'Available', detail: 'Last trip 07:18', tone: 'green' },
-  { plate: 'DMP 2754', model: 'MAN TGS 33.480', state: 'Inspection due', detail: 'Due in 2 days', tone: 'amber' },
-]
+const normalizeTripTone = (status) => {
+  if (status === 'Delivered') return 'green'
+  if (status === 'In transit') return 'blue'
+  return 'amber'
+}
 
 function ReportsView({ summary }) {
   return <div className="content-wrap module-wrap">
@@ -233,6 +226,43 @@ function App() {
   const [summary, setSummary] = useState(defaultSummary)
   const [summaryLoading, setSummaryLoading] = useState(true)
   const [summaryError, setSummaryError] = useState('')
+  const [showQuickTripForm, setShowQuickTripForm] = useState(false)
+  const [quickTripForm, setQuickTripForm] = useState({
+    load_id: '',
+    vehicle_id: '',
+    driver_id: '',
+    planned_start: '',
+    planned_end: '',
+    rate_per_trip: '1500',
+    extra_earnings: '0'
+  })
+  const [quickTripState, setQuickTripState] = useState({ saving: false, error: '' })
+  const [now, setNow] = useState(new Date())
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 1000)
+    return () => clearInterval(timer)
+  }, [])
+
+  const currentUserName = session?.user?.name || 'Administrator'
+  const greetingName = currentUserName.split(' ')[0]
+  const greetingMessage = (() => {
+    const hour = now.getHours()
+    if (hour < 12) return 'Good morning'
+    if (hour < 17) return 'Good afternoon'
+    return 'Good evening'
+  })()
+  const formattedDate = now.toLocaleDateString('en-US', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  })
+  const formattedTime = now.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  })
 
   function handleLogin(nextSession) {
     setSession(nextSession)
@@ -242,6 +272,46 @@ function App() {
   function signOut() {
     setSession(null)
     localStorage.removeItem('arabmonopoly-admin-session')
+  }
+
+  async function handleQuickTripSubmit(event) {
+    event.preventDefault()
+    setQuickTripState({ saving: true, error: '' })
+
+    try {
+      const response = await fetch(`${API}/trips`, {
+        method: 'POST',
+        headers: authHeaders(session.token, true),
+        body: JSON.stringify({
+          ...quickTripForm,
+          load_id: Number(quickTripForm.load_id),
+          vehicle_id: Number(quickTripForm.vehicle_id),
+          driver_id: Number(quickTripForm.driver_id),
+          rate_per_trip: Number(quickTripForm.rate_per_trip || 0),
+          extra_earnings: Number(quickTripForm.extra_earnings || 0),
+        })
+      })
+
+      const payload = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(payload.error || 'Trip could not be created.')
+
+      setShowQuickTripForm(false)
+      setQuickTripForm({
+        load_id: '',
+        vehicle_id: '',
+        driver_id: '',
+        planned_start: '',
+        planned_end: '',
+        rate_per_trip: '1500',
+        extra_earnings: '0'
+      })
+      await loadSummary()
+    } catch (error) {
+      setQuickTripState({ saving: false, error: error.message })
+      return
+    }
+
+    setQuickTripState({ saving: false, error: '' })
   }
 
   const loadSummary = useCallback(async () => {
@@ -272,6 +342,26 @@ function App() {
       ]
     : []
 
+  const recentTrips = [...(summary.dispatch?.planned ?? []), ...(summary.dispatch?.transit ?? []), ...(summary.dispatch?.delivered ?? [])]
+    .slice(0, 5)
+    .map((trip) => ({
+      id: trip.id,
+      route: trip.route || 'General cargo',
+      driver: trip.driver || 'Unassigned',
+      vehicle: trip.vehicle || 'N/A',
+      status: trip.status || 'Planned',
+      tone: normalizeTripTone(trip.status),
+      time: trip.time || 'Scheduled'
+    }))
+
+  const fleetPulse = (summary.driverTotals || []).slice(0, 3).map((driver, index) => ({
+    plate: driver.name || `Driver ${index + 1}`,
+    model: `${driver.totalTrips ?? 0} trips`,
+    state: (driver.deliveredTrips ?? 0) > 0 ? 'On route' : 'Available',
+    detail: `${driver.deliveredTrips ?? 0} delivered`,
+    tone: index === 0 ? 'blue' : index === 1 ? 'green' : 'amber'
+  }))
+
   const exceptions = summary.exceptions?.length ? summary.exceptions : [
     { title: 'Network health', detail: 'No operational exceptions detected right now.', severity: 'green', action: 'View' }
   ]
@@ -288,7 +378,6 @@ function App() {
           {navItems.map(([label, icon]) => <button onClick={() => setView(label)} className={`nav-item ${view === label ? 'active' : ''}`} key={label}><span className="nav-icon">{icon}</span>{label}{label === 'Payments' && <span className="nav-badge">3</span>}</button>)}
         </nav>
         <div className="sidebar-bottom">
-          <button className="nav-item" onClick={() => setView('Settings')}><span className="nav-icon">⚙</span>Settings</button>
           <button className="user-card" onClick={signOut}><span className="avatar">{session.user?.name?.slice(0, 2).toUpperCase() || 'AD'}</span><span><strong>{session.user?.name || 'Administrator'}</strong><small>Sign out</small></span><span className="more">•••</span></button>
         </div>
       </aside>
@@ -296,7 +385,24 @@ function App() {
       <main className="main-content">
         <header className="topbar"><button className="mobile-menu" aria-label="Open menu">☰</button><div className="breadcrumbs"><span>Operations</span><b>/</b><strong>Overview</strong></div><div className="top-actions"><button className="icon-button" aria-label="Search">⌕</button><button className="icon-button notification" aria-label="Notifications">♢<i /></button><button className="help-button">?</button></div></header>
         {view === 'Overview' ? <div className="content-wrap">
-          <section className="welcome-row"><div><p className="eyebrow">THURSDAY, 10 SEPTEMBER 2026</p><h1>Good morning, Ahmed<span className="title-accent">.</span></h1><p className="lede">Here is what is happening across your fleet today.</p></div><button className="primary-button"><span>＋</span> Create trip</button></section>
+          <section className="welcome-row"><div><p className="eyebrow">{formattedDate.toUpperCase()} · {formattedTime}</p><h1>{greetingMessage}, {greetingName}<span className="title-accent">.</span></h1><p className="lede">Here is what is happening across your fleet today.</p></div><button className="primary-button" onClick={() => setShowQuickTripForm(true)}><span>＋</span> Create trip</button></section>
+
+          {showQuickTripForm && <div className="quick-trip-overlay" onClick={() => setShowQuickTripForm(false)}>
+            <div className="quick-trip-modal" onClick={(event) => event.stopPropagation()}>
+              <div className="panel-heading"><div><h2>Create trip</h2><p>Schedule a new load to the active fleet.</p></div><button className="text-button" type="button" onClick={() => setShowQuickTripForm(false)}>Close</button></div>
+              <form className="quick-trip-form" onSubmit={handleQuickTripSubmit}>
+                <label>Load ID<input required value={quickTripForm.load_id} onChange={(event) => setQuickTripForm({ ...quickTripForm, load_id: event.target.value })} /></label>
+                <label>Vehicle ID<input required value={quickTripForm.vehicle_id} onChange={(event) => setQuickTripForm({ ...quickTripForm, vehicle_id: event.target.value })} /></label>
+                <label>Driver ID<input required value={quickTripForm.driver_id} onChange={(event) => setQuickTripForm({ ...quickTripForm, driver_id: event.target.value })} /></label>
+                <label>Planned start<input required type="datetime-local" value={quickTripForm.planned_start} onChange={(event) => setQuickTripForm({ ...quickTripForm, planned_start: event.target.value })} /></label>
+                <label>Planned end<input required type="datetime-local" value={quickTripForm.planned_end} onChange={(event) => setQuickTripForm({ ...quickTripForm, planned_end: event.target.value })} /></label>
+                <label>Trip rate<input required type="number" min="0" value={quickTripForm.rate_per_trip} onChange={(event) => setQuickTripForm({ ...quickTripForm, rate_per_trip: event.target.value })} /></label>
+                <label>Extra earnings<input type="number" min="0" value={quickTripForm.extra_earnings} onChange={(event) => setQuickTripForm({ ...quickTripForm, extra_earnings: event.target.value })} /></label>
+                {quickTripState.error && <div className="api-error" style={{ gridColumn: '1 / -1' }}>{quickTripState.error}</div>}
+                <button className="primary-button form-submit" type="submit" disabled={quickTripState.saving}>{quickTripState.saving ? 'Creating...' : 'Save trip'}</button>
+              </form>
+            </div>
+          </div>}
 
           <section className="metric-grid" aria-label="Today's overview">
             <article className="metric-card"><div className="metric-top"><span className="metric-label">ACTIVE TRIPS</span><span className="metric-icon blue-bg">↗</span></div><div className="metric-value">{summaryLoading ? '—' : summary.kpis?.activeTrips ?? 0}</div><div className="metric-foot"><span className="trend up">↗ 12.5%</span><span>vs yesterday</span></div></article>
@@ -321,7 +427,7 @@ function App() {
             <article className="panel status-panel"><div className="panel-heading"><div><h2>Fleet status</h2><p>32 vehicles in your fleet</p></div><button className="icon-button">•••</button></div><div className="donut-wrap"><div className="donut"><div><strong>82%</strong><span>utilized</span></div></div><div className="legend"><div><i className="dot blue-dot" /><span>On route</span><strong>24</strong></div><div><i className="dot green-dot" /><span>Available</span><strong>5</strong></div><div><i className="dot gray-dot" /><span>Maintenance</span><strong>3</strong></div></div></div><button className="outline-button">Manage fleet <span>→</span></button></article>
           </section>
 
-          <section className="dashboard-grid lower-grid"><article className="panel table-panel"><div className="panel-heading"><div><h2>Recent trips</h2><p>Latest movement across your network</p></div><button className="filter-button">All trips <span>⌄</span></button></div><div className="table-wrap"><table><thead><tr><th>TRIP ID</th><th>ROUTE</th><th>DRIVER</th><th>STATUS</th><th>TIME</th></tr></thead><tbody>{trips.map((trip) => <tr key={trip.id}><td><strong>{trip.id}</strong><small>{trip.vehicle}</small></td><td>{trip.route}</td><td>{trip.driver}</td><td><span className={`status-pill ${trip.tone}`}><i />{trip.status}</span></td><td className="time-cell">{trip.time}</td></tr>)}</tbody></table></div></article><article className="panel vehicles-panel"><div className="panel-heading"><div><h2>Fleet pulse</h2><p>Vehicles needing attention</p></div><button className="text-button">View fleet <span>→</span></button></div><div className="vehicle-list">{fleet.map((vehicle) => <div className="vehicle-row" key={vehicle.plate}><span className={`vehicle-icon ${vehicle.tone}`}>▣</span><span><strong>{vehicle.plate}</strong><small>{vehicle.model}</small></span><span className="vehicle-state"><b className={`state-dot ${vehicle.tone}`} />{vehicle.state}<small>{vehicle.detail}</small></span></div>)}</div></article></section>
+          <section className="dashboard-grid lower-grid"><article className="panel table-panel"><div className="panel-heading"><div><h2>Recent trips</h2><p>Latest movement across your network</p></div><button className="filter-button">All trips <span>⌄</span></button></div><div className="table-wrap"><table><thead><tr><th>TRIP ID</th><th>ROUTE</th><th>DRIVER</th><th>STATUS</th><th>TIME</th></tr></thead><tbody>{recentTrips.map((trip) => <tr key={trip.id}><td><strong>{trip.id}</strong><small>{trip.vehicle}</small></td><td>{trip.route}</td><td>{trip.driver}</td><td><span className={`status-pill ${trip.tone}`}><i />{trip.status}</span></td><td className="time-cell">{trip.time}</td></tr>)}{!recentTrips.length && <tr><td className="empty-cell" colSpan="5">No recent trip activity.</td></tr>}</tbody></table></div></article><article className="panel vehicles-panel"><div className="panel-heading"><div><h2>Fleet pulse</h2><p>Drivers and activity levels</p></div><button className="text-button">View fleet <span>→</span></button></div><div className="vehicle-list">{fleetPulse.map((driver) => <div className="vehicle-row" key={driver.plate}><span className={`vehicle-icon ${driver.tone}`}>▣</span><span><strong>{driver.plate}</strong><small>{driver.model}</small></span><span className="vehicle-state"><b className={`state-dot ${driver.tone}`} />{driver.state}<small>{driver.detail}</small></span></div>)}{!fleetPulse.length && <div className="vehicle-row"><span className="vehicle-icon amber">▣</span><span><strong>No activity</strong><small>Awaiting drivers</small></span><span className="vehicle-state"><b className="state-dot amber" />Available<small>0 delivered</small></span></div>}</div></article></section>
           <footer className="footer"><span>© 2026 Arabmonopoly Logistics</span><span>System status <i className="online-dot" /> All systems operational</span></footer>
         </div> : view === 'Reports' ? <ReportsView summary={summary} /> : view === 'Settings' ? <SettingsView /> : view === 'Audit' ? <AuditLogView token={session.token} /> : view === 'Users' ? <UserManagementView token={session.token} /> : <ManagementView module={view} token={session.token} />}
       </main>
