@@ -244,7 +244,8 @@ function App() {
     return () => clearInterval(timer)
   }, [])
 
-  const currentUserName = session?.user?.name || 'Administrator'
+  const currentUserName = session?.user?.name || session?.user?.email?.split('@')[0] || 'Administrator'
+  const currentUserInitials = currentUserName.slice(0, 2).toUpperCase()
   const greetingName = currentUserName.split(' ')[0]
   const greetingMessage = (() => {
     const hour = now.getHours()
@@ -252,13 +253,13 @@ function App() {
     if (hour < 17) return 'Good afternoon'
     return 'Good evening'
   })()
-  const formattedDate = now.toLocaleDateString('en-US', {
+  const formattedDate = now.toLocaleDateString(undefined, {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   })
-  const formattedTime = now.toLocaleTimeString('en-US', {
+  const formattedTime = now.toLocaleTimeString(undefined, {
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit'
@@ -378,7 +379,7 @@ function App() {
           {navItems.map(([label, icon]) => <button onClick={() => setView(label)} className={`nav-item ${view === label ? 'active' : ''}`} key={label}><span className="nav-icon">{icon}</span>{label}{label === 'Payments' && <span className="nav-badge">3</span>}</button>)}
         </nav>
         <div className="sidebar-bottom">
-          <button className="user-card" onClick={signOut}><span className="avatar">{session.user?.name?.slice(0, 2).toUpperCase() || 'AD'}</span><span><strong>{session.user?.name || 'Administrator'}</strong><small>Sign out</small></span><span className="more">•••</span></button>
+          <button className="user-card" onClick={signOut}><span className="avatar">{currentUserInitials}</span><span><strong>{currentUserName}</strong><small>Sign out</small></span><span className="more">•••</span></button>
         </div>
       </aside>
 
