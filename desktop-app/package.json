@@ -10,7 +10,7 @@
     "dist": "node copy-dist.cjs && electron-builder --win nsis --x64"
   },
   "devDependencies": {
-    "electron": "^41.0.0",
+    "electron": "^44.3.0",
     "electron-builder": "^26.0.0"
   },
   "build": {
