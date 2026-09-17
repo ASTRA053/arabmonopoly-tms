@@ -1,4 +1,4 @@
-.env.local
+﻿.env.local
 .env
 .neon
 **/.env
@@ -18,4 +18,8 @@ desktop-app/release/
 *.log
 backend/.env
 backend/.env.neon
+AI_HANDOFF.md
+PROJECT_HANDOFF.md
+*_HANDOFF.md
+
 
