@@ -71,18 +71,19 @@ Android v5 background-GPS build was submitted to EAS and was still in progress o
 
 When it finishes, download its APK into `releases/android-apk/Arabmonopoly-Driver-v5.apk`, calculate its SHA-256, and update the archive README.
 
-## Current Git State (13 September 2026)
+## Current Git State & Updates (18 September 2026)
 
 - Branch: `publish-fuel`.
-- Remote production branch: `origin/main` at `68b4426` (`feat: let drivers submit fuel with pump photos`).
-- The following work is present locally but not committed/pushed yet:
-  - background location implementation and configuration
-  - Audit dashboard screen
-  - Android APK archive files and README
-  - this handoff file
-  - `PROJECT_HANDOFF.md` updates
-- Do not run destructive Git commands. Review `git status` before staging.
-- Earlier main history includes large Electron release artifacts, which caused GitHub HTTP 408 push failures. A lightweight branch from `origin/main` was used successfully for the fuel source commit. Avoid committing APKs, Electron release folders, or other binaries to Git; keep them local under `releases/`.
+- Backend production hardening completed:
+  - Added `helmet` security headers and `express-rate-limit` (global and login rate-limiting).
+  - Robust PostgreSQL pool config (`backend/src/db.js`) with SSL for Neon, connection limits, and idle error listeners.
+  - Startup environment validation (`JWT_SECRET`, `DATABASE_URL`) and graceful shutdown (`SIGTERM`, `SIGINT`).
+  - Comprehensive `.gitignore` updates ensuring `.apk`, `.exe`, `.blockmap`, and release folders remain untracked.
+- Validated:
+  - Backend dashboard unit tests passed.
+  - `web-admin` build & lint passed.
+  - `mobile-app` web export passed.
+  - Render API live health check returned HTTP 200.
 
 ## Validation Already Performed
 
