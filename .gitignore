@@ -6,8 +6,16 @@
 **/node_modules/
 **/dist/
 **/release/
-releases/**/*.apk
+releases/
+desktop-app/release/
+*.apk
+*.exe
+*.blockmap
+**/*.apk
+**/*.exe
+**/*.blockmap
 *.tgz
 *.log
 backend/.env
 backend/.env.neon
+
