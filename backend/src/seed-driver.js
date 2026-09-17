@@ -5,17 +5,21 @@ const { Pool } = pkg;
 import bcrypt from 'bcrypt';
 
 const pool = new Pool({
-  host: 'localhost',
-  port: 5432,
-  database: 'tms_db',
-  user: 'user',
-  password: 'Aa123456',
+  connectionString: process.env.DATABASE_URL,
 });
 
+function requireEnv(name) {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(`${name} must be set before seeding users`);
+  }
+  return value;
+}
+
 async function createDriver() {
-  const email = 'driver1@tms.local';
-  const password = 'Driver123!';
-  const name = 'Driver One';
+  const email = requireEnv('DRIVER_EMAIL').toLowerCase();
+  const password = requireEnv('DRIVER_PASSWORD');
+  const name = process.env.DRIVER_NAME || 'Driver';
 
   const client = await pool.connect();
   try {
